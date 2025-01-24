@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import './tarefas.css';
+import axios from 'axios';
 
 function Tarefas() {
     const [listaTarefas, setListaTarefas] = useState([]);
@@ -8,69 +9,82 @@ function Tarefas() {
     const [data, setData] = useState("");
     const [filtroTarefas, setFiltroTarefas] = useState([]);
 
-    function handleAddTarefa(event) {
+    useEffect(() => {
+        fetchTarefas();
+    }, []);
+
+    const fetchTarefas = async () => {
+        try {
+            const response = await axios.get('http://localhost:5000/tarefas');
+            console.log(response.data);  // Verifique os dados no console
+            setListaTarefas(response.data);
+        } catch (error) {
+            console.error("Erro ao buscar tarefas:", error);
+        }
+    };
+
+    const handleAddTarefa = async (event) => {
         event.preventDefault();
 
         if (Descricao && ComboBox && data) {
-            setListaTarefas([...listaTarefas, { Descricao, ComboBox, data, status: "Pendente" }]);
-            alert("Dados adicionados com sucesso!");
-
-            setComboBox("");
-            setData("");
-            setDescricao("");
+            try {
+                await axios.post('http://localhost:5000/tarefas', {
+                    descricao: Descricao,
+                    tipo: ComboBox,
+                    data,
+                });
+                alert("Dados adicionados com sucesso!");
+                setDescricao("");
+                setComboBox("");
+                setData("");
+                fetchTarefas();
+            } catch (error) {
+                console.error("Erro ao adicionar tarefa:", error);
+            }
         } else {
             alert("Preencha todos campos obrigatórios!");
         }
-    }
+    };
 
-    function handleConcluir(index) {
-        const novasTarefas = [...listaTarefas];
-        novasTarefas[index].status = "Concluída";
-        setListaTarefas(novasTarefas);
-    }
+    const handleConcluir = async (id) => {
+        try {
+            await axios.put(`http://localhost:5000/tarefas/${id}/concluir`);
+            fetchTarefas();
+        } catch (error) {
+            console.error("Erro ao concluir tarefa:", error);
+        }
+    };
 
-    function handleEditar(index) {
-        const tarefa = listaTarefas[index];
-        setDescricao(tarefa.Descricao);
-        setComboBox(tarefa.ComboBox);
-        setData(tarefa.data);
-
-        const novasTarefas = listaTarefas.filter((_, i) => i !== index);
-        setListaTarefas(novasTarefas);
-    }
-
-    function handleApagar(index, isFiltered) {
-        const lista = isFiltered ? filtroTarefas : listaTarefas;
-        const novasTarefas = lista.filter((_, i) => i !== index);
+    const handleApagar = async (id) => {
         const confirmacao = confirm("Tem certeza que deseja excluir?");
         if (confirmacao) {
-            if (isFiltered) {
-                setFiltroTarefas(novasTarefas);
-                setListaTarefas(listaTarefas.filter((_, i) => i !== listaTarefas.indexOf(lista[index])));
-            } else {
-                setListaTarefas(novasTarefas);
+            try {
+                await axios.delete(`http://localhost:5000/tarefas/${id}`);
+                fetchTarefas();
+            } catch (error) {
+                console.error("Erro ao excluir tarefa:", error);
             }
         }
-    }
+    };
 
-    function handlePesquisar(event) {
+    const handlePesquisar = (event) => {
         event.preventDefault();
         const resultados = listaTarefas.filter((tarefa) => {
             return (
-                (Descricao && tarefa.Descricao.includes(Descricao)) ||
-                (ComboBox && tarefa.ComboBox.includes(ComboBox)) ||
+                (Descricao && tarefa.descricao.includes(Descricao)) ||
+                (ComboBox && tarefa.tipo.includes(ComboBox)) ||
                 (data && tarefa.data.includes(data))
             );
         });
         setFiltroTarefas(resultados);
-    }
+    };
 
-    function handleLimparPesquisa() {
+    const handleLimparPesquisa = () => {
         setFiltroTarefas([]);
         setDescricao("");
         setComboBox("");
         setData("");
-    }
+    };
 
     return (
         <div>
@@ -122,28 +136,27 @@ function Tarefas() {
                             </tr>
                         </thead>
                         <tbody>
-                            {(filtroTarefas.length > 0 ? filtroTarefas : listaTarefas).map((tarefa, index) => (
-                                <tr key={index}>
-                                    <td>{tarefa.Descricao}</td>
-                                    <td>{tarefa.ComboBox}</td>
-                                    <td>{tarefa.data}</td>
-                                    <td>{tarefa.status}</td>
-                                    <td>
-                                        {tarefa.status !== "Concluída" && (
-                                            <>
-                                                <div>
-                                                    <button onClick={() => handleConcluir(index)}>Concluir</button>
-                                                    <button onClick={() => handleEditar(index)}>Editar</button>
-                                                </div>
-                                            </>
-                                        )}
-                                        {tarefa.status === "Concluída" && (
-                                            <button onClick={() => handleApagar(index, filtroTarefas.length > 0)}>Apagar</button>
-                                        )}
-                                    </td>
+                            {(filtroTarefas.length > 0 ? filtroTarefas : listaTarefas).map((tarefa) => (
+                                <tr key={tarefa.id}>
+                                <td>{tarefa.descricao}</td>
+                                <td>{tarefa.tipo}</td>
+                                <td>{tarefa.data}</td>
+                                <td>{tarefa.status}</td>
+                                <td>
+                                    {tarefa.status !== "Concluída" && (
+                                    <>
+                                        <button onClick={() => handleConcluir(tarefa.id)}>Concluir</button>
+                                        <button onClick={() => handleEditar(tarefa.id)}>Editar</button>
+                                    </>
+                                    )}
+                                    {tarefa.status === "Concluída" && (
+                                    <button onClick={() => handleApagar(tarefa.id)}>Apagar</button>
+                                    )}
+                                </td>
                                 </tr>
                             ))}
                         </tbody>
+
                     </table>
                 </div>
             </div>

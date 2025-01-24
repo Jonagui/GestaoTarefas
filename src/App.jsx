@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import React, { useState } from 'react'
 import Login from './Login'
 import Registo from './Registo'
-import Tarefas from './tarefas'
+import Tarefas from './Tarefas'
 
 function App(){
     const [autenticado, setAutenticado] = useState(false)
